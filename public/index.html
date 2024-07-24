@@ -6,14 +6,18 @@
     <style></style>
   </head>
   <body>
+    <p>Пользователей онлайн: <span id="users-online"></span></p>
+    <p>Пользователей в комнате: <span id="users-in-room"></span></p>
+    <input id="recipient-input" placeholder="Имя получателя" />
+    <button id="private-message-button">Отправить личное сообщение</button>
     <ul id="messages"></ul>
     <form action="">
       <input id="message-input" autocomplete="off" autofocus /><button>
-        Send
+        Отправить
       </button>
     </form>
     <input id="room-input" placeholder="Room name" />
-    <button id="join-button">Join</button>
+    <button id="join-button">Подключиться</button>
     <ul id="rooms"></ul>
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -39,6 +43,26 @@
       document.getElementById("join-button").addEventListener("click", () => {
         socket.emit("join room", document.getElementById("room-input").value);
       });
+      document
+        .getElementById("private-message-button")
+        .addEventListener("click", () => {
+          const recipient = document.getElementById("recipient-input").value;
+          if (recipient.trim()) {
+            const uniqueRoomName = `private-${socket.id}-${recipient}`;
+            socket.emit("join room", uniqueRoomName);
+            socket.emit("private message", {
+              message: document.getElementById("message-input").value,
+              room: uniqueRoomName,
+            });
+            document.getElementById("message-input").value = "";
+          }
+        });
+
+      socket.on("private message", (msg) => {
+        const li = document.createElement("li");
+        li.textContent = msg;
+        document.getElementById("messages").appendChild(li);
+      });
 
       socket.on("rooms", (rooms) => {
         document.getElementById("rooms").innerHTML = "";
@@ -55,6 +79,13 @@
 
       socket.on("join room error", (error) => {
         console.error(error);
+      });
+      socket.on("users online", (count) => {
+        document.getElementById("users-online").textContent = count;
+      });
+
+      socket.on("users in room", (count1) => {
+        document.getElementById("users-in-room").textContent = count1;
       });
     </script>
   </body>

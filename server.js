@@ -9,6 +9,7 @@ const io = socketio(server);
 app.use(express.static(__dirname + '/public'));
 
 const rooms = new Set();
+const roomUsers = new Map();
 
 io.on('connection', (socket) => {
     console.log('a user connected');
@@ -19,6 +20,14 @@ io.on('connection', (socket) => {
         if (room) {
             rooms.delete(room);
             io.emit('rooms', Array.from(rooms.values()));
+            if (roomUsers.has(room)) {
+                const users = roomUsers.get(room);
+                users.delete(socket.id);
+                io.to(room).emit('users in room', users.size);
+                if (users.size === 0) {
+                    roomUsers.delete(room);
+                }
+            }
         }
     });
 
@@ -38,13 +47,27 @@ io.on('connection', (socket) => {
         io.emit('rooms', Array.from(rooms.values()));
         socket.join(room);
         socket.emit('join room success', room);
+        if (!roomUsers.has(room)) {
+            roomUsers.set(room, new Set());
+        }
+        const users = roomUsers.get(room);
+        users.add(socket.id);
+        io.to(room).emit('users in room', users.size);
     });
-});
 
-setInterval(() => {
-    io.emit('rooms', Array.from(rooms.values()));
-}, 1000);
+    socket.on('private message', (msg) => {
+        const room = msg.room;
+        if (room) {
+            io.to(room).emit('private message', msg.message);
+        }
+    });
+
+});
 
 server.listen(3000, () => {
     console.log('server is running on port 3000');
+    setInterval(() => {
+        io.emit('rooms', Array.from(rooms.values()));
+        io.emit('users online', io.engine.clientsCount);
+    }, 1000);
 });
