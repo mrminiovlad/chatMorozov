@@ -1,32 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Chat</title>
     <style></style>
-</head>
-<body>
+  </head>
+  <body>
     <ul id="messages"></ul>
     <form action="">
-        <input id="message-input" autocomplete="off" autofocus /><button>Send</button>
+      <input id="message-input" autocomplete="off" autofocus /><button>
+        Send
+      </button>
     </form>
+    <input id="room-input" placeholder="Room name" />
+    <button id="join-button">Join</button>
+    <ul id="rooms"></ul>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-    const socket = io();
+      const socket = io();
 
-    socket.on('chat message', (msg) => {
-        const li = document.createElement('li');
+      socket.on("chat message", (msg) => {
+        const li = document.createElement("li");
         li.textContent = msg;
-        document.getElementById('messages').appendChild(li);
-    });
+        document.getElementById("messages").appendChild(li);
+      });
 
-    document.querySelector('form').addEventListener('submit', (e) => {
+      document.querySelector("form").addEventListener("submit", (e) => {
         e.preventDefault();
-        if (document.getElementById('message-input').value.trim()) {
-            socket.emit('chat message', document.getElementById('message-input').value);
-            document.getElementById('message-input').value = '';
+        if (document.getElementById("message-input").value.trim()) {
+          socket.emit("chat message", {
+            message: document.getElementById("message-input").value,
+            room: document.getElementById("room-input").value,
+          });
+          document.getElementById("message-input").value = "";
         }
-    });
+      });
+
+      document.getElementById("join-button").addEventListener("click", () => {
+        socket.emit("join room", document.getElementById("room-input").value);
+      });
+
+      socket.on("rooms", (rooms) => {
+        document.getElementById("rooms").innerHTML = "";
+        for (const room of rooms) {
+          const li = document.createElement("li");
+          li.textContent = room;
+          document.getElementById("rooms").appendChild(li);
+        }
+      });
+
+      socket.on("join room success", (room) => {
+        document.getElementById("room-input").value = room;
+      });
+
+      socket.on("join room error", (error) => {
+        console.error(error);
+      });
     </script>
-</body>
+  </body>
 </html>
